@@ -1,0 +1,12 @@
+[
+    {
+        "ID":0,
+        "Name":"SQL Injection",
+        "ImageRepositoryTag":"sql_injection:do_not_delete"
+    },
+    {
+        "ID":1,
+        "Name":"Main",
+        "ImageRepositoryTag":"main_web:do_not_delete"
+    }
+]

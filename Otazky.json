@@ -1,0 +1,62 @@
+
+[
+  {
+    "Id": 0,
+    "Name": "sql_injection",
+    "PageTitleString": "SQL Injection",
+    "otazky": [
+      {
+        "otazka": "Jaký je název příkazu pro oskenování zařízení v síti? Též nazývaný jako Network Mapper",
+        "odpoved": "nmap",
+        "napovedy": [
+          "Možná to je zkratka z názvu Network Mapper",
+          "Zkus si to vyhledat na internetu",
+          "Napiš 'nmap' a zjisti si o něm něco na oficiálních stránkách + dokumentaci k němu"
+        ],
+        "showedHint": "",
+        "hintID": -1,
+        "clientAnswer": "",
+        "correctAnswer": false
+      },
+      {
+        "otazka": "Který port je otevřený na virtuálním serveru? (jen číslo portu)",
+        "odpoved": "80",
+        "napovedy": [
+          "Zkus využít nmap",
+          "Zadej do příkazové řádky nmap + IP adresu serveru",
+          "Je to port 80 - port pro webové rozhraní"
+        ],
+        "showedHint": "",
+        "hintID": -1,
+        "clientAnswer": "",
+        "correctAnswer": false
+      },
+      {
+        "otazka": "Gobuster je další z hojně využívaných nástrojů, použij ho a zjisti kolik dalších adresářů našel, kromě již objeveného '/'. (jako wordlist použij /opt/gobuster/big.txt)",
+        "odpoved": "2",
+        "napovedy": [
+          "Podívej se do dokumentace gobusteru nebo napiš strohý příkaz 'gobuster'",
+          "Zadej do příkazové řádky 'gobuster -w /opt/gobuster-worldlist/big.txt -u {IP adresa serveru}'. Uvidíš tam dva výsledky: /hello a /logging"
+        ],
+        "showedHint": "",
+        "hintID": -1,
+        "clientAnswer": "",
+        "correctAnswer": false
+      },
+      {
+        "otazka": "Podívej se do zbývajících adresářů, které našel gobuster. Zde využijeme způsob techniky napadení databázové vrstvy. Jak se tato technika nazývá?",
+        "odpoved": "SQL injection",
+        "napovedy": [
+          "Zkus popátrat na internetu nebo dokonce i na této stránce",
+          "Podívej se nahoru",
+          "Je to doslova nadpis",
+          "Napiš SQL injection"
+        ],
+        "showedHint": "",
+        "hintID": -1,
+        "clientAnswer": "",
+        "correctAnswer": false
+      }
+    ]
+  }
+]
