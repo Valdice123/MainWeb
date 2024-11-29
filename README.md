@@ -18,3 +18,5 @@ Zkoušel jsem si zapnout několik dockerů a vybrat si jeden pomocí IP adresy. 
 - Kontroloval jsem MainClass když jsem si chtěl znovu vybrat docker a zjistil jsem že z inner-joinu nedostanu žádné data i když před tím jsem je dostal
 
 > Všechno se to děje ve vlastnosti SelectedDocker.. to mi spustí event z nabindovaného HTML selectu
+
+> Sestavená docker image by se měla jmenovat `sql_injection`, na tagu by nemělo záležet ale já ho mám jako `do_not_delete`
