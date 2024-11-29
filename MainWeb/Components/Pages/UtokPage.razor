@@ -1,0 +1,391 @@
+@page "/virtual"
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+@inject IJSRuntime JSRuntime
+
+@if(MainClass.Title == null){
+<PageTitle>Zvol Docker</PageTitle>
+<label>Zvol IP sveho dockeru:</label>
+<select @bind="SelectedDocker">
+    <option value="Zvol si docker">Zvol si docker</option>
+  @foreach(DockerRunningContainer docker in runningContainers){
+  <option value="@docker.IPAddress">@docker.IPAddress</option>
+  }
+</select>
+@code{
+    private List<DockerRunningContainer> runningContainers = ReadAllRunningDockerContainers();
+    private static List<DockerRunningContainer> ReadAllRunningDockerContainers(){
+        string ConIDs = StartProcessResult("docker","ps --format '{{.ID}}{{.Image}}'",true);
+        string[] output = ConIDs.Split('\n');
+
+        List<DockerRunningContainer> returnList = new List<DockerRunningContainer>();
+
+        for(int i = 0; i < output.Length - 1; i++){
+            string id = output[i].Substring(1, 12);
+            string name = output[i].Substring(13, output[i].Length - 14);
+            string flag = StartProcessResult("docker", $"inspect -f \"{{{{range .Config.Env}}}}{{{{println .}}}}{{{{end}}}}\" {id}",false).Split('\n')[0]; // pro pripad ze by to byla ta prvni
+            string repository = GetRepository(id);
+
+            DockerRunningContainer docker = new DockerRunningContainer{
+                        ContainerID = StartProcessResult("docker", $"inspect --format=\"{{{{.Id}}}}\" {id}"), 
+                        IPAddress = StartProcessResult("docker", $"inspect --format=\"{{{{range .NetworkSettings.Networks}}}}{{{{.IPAddress}}}}{{{{end}}}}\" {id}")
+                        @*    inspect --format=\"{{{{.NetworkSettings.Networks.<network_name>.IPAddress}}}}\" {id}  nebo toto    *@,
+                        Flag = flag,
+                        ImageRepository = repository
+                        };
+            
+            returnList.Add(docker);
+        }
+        return returnList;
+    }
+    private class DockerRunningContainer{
+        public string ContainerID {get; set;}
+        public string IPAddress {get; set;}
+        public string Flag {get;set;}
+        public string ImageRepository{get;set;}
+    }
+    private static string StartProcessResult(string command, string arguments, bool clearOutput = false){
+        var process = new System.Diagnostics.Process();
+
+        process.StartInfo.FileName = command;
+        process.StartInfo.Arguments = arguments;
+        process.StartInfo.RedirectStandardOutput = true;
+        process.StartInfo.UseShellExecute = false;
+        process.StartInfo.CreateNoWindow = true;
+
+        process.Start();
+
+        // Wait for the process to exit.
+        process.WaitForExit();
+
+        string output = process.StandardOutput.ReadToEnd();
+
+        if(string.IsNullOrEmpty(output) || clearOutput)
+            return output;
+
+        return ParseWithoutEnterAtTheEnd(output);
+    }
+    private static string ParseWithoutEnterAtTheEnd(string stringToParse) => stringToParse.Substring(0,stringToParse.Length-1);
+    private static string GetRepository(string conID){
+        string imageID = StartProcessResult("docker", $"inspect --format='{{{{.Image}}}}' {conID}").Split(':')[1];
+        imageID = ParseWithoutEnterAtTheEnd(imageID);
+
+        if(string.IsNullOrWhiteSpace(imageID)){
+            Console.WriteLine("Error na radku 78 v UtokPage.. imageID je null");
+            return "";
+        }
+    
+        System.Text.StringBuilder output = new System.Text.StringBuilder();
+
+        var process = new System.Diagnostics.Process();
+        process.StartInfo.FileName = "docker";
+        process.StartInfo.Arguments = "image ls --format=\"{{.ID}}: {{.Repository}}\"";
+        process.StartInfo.RedirectStandardOutput = true;
+        process.OutputDataReceived += (sender, e) => { if (e.Data != null) output.AppendLine(e.Data); };
+        process.StartInfo.UseShellExecute = false;
+        process.StartInfo.CreateNoWindow = true;
+        
+        process.Start();
+        process.BeginOutputReadLine();
+        process.WaitForExit();
+
+        if(string.IsNullOrEmpty(output.ToString()))
+            return "";
+
+        string[] array = output.ToString().Split('\n');;
+        string rightItem = "";
+            
+        foreach (string item in array)
+            if(item.Contains(imageID.Substring(0,6)))
+                rightItem = item;
+                
+        if(string.IsNullOrWhiteSpace(rightItem) || string.IsNullOrWhiteSpace(rightItem.Split(':', ' ')[2]))
+            return "null";
+        
+        return rightItem.Split(':', ' ')[2];
+    }
+    private string _selectedDocker = " ";
+    private string SelectedDocker {
+        get{return _selectedDocker;}
+        set{
+            if(value == _selectedDocker || value == null || string.IsNullOrWhiteSpace(value) || value == "Zvol si docker")
+                return;
+            
+
+            string finalIP, finalID, finalFlag, repository;
+            finalFlag = finalID = repository = string.Empty;
+
+            finalIP = _selectedDocker = value;
+
+            foreach(DockerRunningContainer docker in runningContainers){
+                if(docker.IPAddress == finalIP){
+                    finalID = docker.ContainerID;
+                    finalFlag = docker.Flag;
+                    repository = docker.ImageRepository;
+                    break;
+                }
+            }
+
+            if(finalIP == null || finalID == null || finalFlag == null)
+                return;
+
+            List<QuestionsJson> questionList = new List<QuestionsJson>();
+            List<JsonForTeachers> teachersList = new List<JsonForTeachers>();
+
+            using(var stringReader = new StreamReader("/opt/Projekt/Otazky.json")) {
+                string json = stringReader.ReadToEnd();
+                questionList = System.Text.Json.JsonSerializer.Deserialize<List<QuestionsJson>>(json);
+            }
+
+            using(var stringReader = new StreamReader("/opt/Projekt/DockerImagesForTeacher.json")) {
+                string json = stringReader.ReadToEnd();
+                teachersList = System.Text.Json.JsonSerializer.Deserialize<List<JsonForTeachers>>(json);
+            }
+
+            if(questionList == null || teachersList == null)
+                return;
+
+            QuestionsJson correctJson = new QuestionsJson();
+            try{
+            correctJson = (from question in questionList
+                                         join teacher in teachersList
+                                         on question.Id equals teacher.ID
+                                         where teacher!.ImageRepositoryTag!.Split(':')[0] == repository
+                                         select new QuestionsJson
+                                         {
+                                             Id = question.Id,
+                                             Name = question.Name,
+                                             PageTitleString = question.PageTitleString,
+                                             otazky = question.otazky
+                                         }).FirstOrDefault();
+            } catch (Exception ex) {
+                Console.WriteLine(ex.ToString());
+            }
+
+            Console.Write(finalIP);
+            
+            if(correctJson == null) //correctJson je null a nevi se proc.. vzdy to fungovalo dokud se ENV nepripojilo.. jenze vlajka je spravne a zde se nic nedela.. idk gl
+                return;
+
+            Console.Write($@"
+                ID: {finalID}
+                IP: {finalIP}
+                Title: {correctJson.PageTitleString}
+                Flag: {finalFlag} 
+
+            ");
+
+            MainClass.SetValues(
+                finalIP,
+                finalID,
+                correctJson!.PageTitleString!,
+                finalFlag,
+                correctJson!.otazky!
+            );
+
+            @* runningContainers.Clear(); *@
+        }
+    }
+    public class QuestionsJson{
+        public int Id {get;set;}
+        public string Name {get;set;}
+        public string PageTitleString {get;set;}
+        public List<Questions> otazky {get;set;}
+    }
+    public class JsonForTeachers{
+        public int ID {get;set;}
+        public string Name {get; set;}
+        public string ImageRepositoryTag {get; set;}
+    }
+}}
+
+
+
+
+else{
+<PageTitle>@MainClass.Title</PageTitle>
+
+<button @onclick="GoToSelect">Go back</button>
+
+<h1>@MainClass.Title</h1>
+<style>
+.box {
+    margin-top: 50px;
+    margin-bottom: 70px;
+    margin-left: 10rem;
+    margin-right: 10rem;
+    padding: 40px;
+    background-color: #283044;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    text-align: center;
+}
+
+h3 {
+    color: #ebf5ee;
+    margin-bottom: 15px;
+}
+
+.input-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+input {
+    padding: 10px;
+    width: 35rem;
+    border: 8px solid #78a1bb;
+    border-radius: 5px;
+    outline: none;
+}
+
+input:focus {
+    border-color: #bfa89e;
+}
+
+button {
+    padding: 15px 25px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    color: #ffffff;
+}
+
+.question-button {
+    background-color: #8b786d;
+}
+
+.send-button {
+    background-color: #78a1bb;
+}
+
+.question-button:hover {
+    background-color: #bfa89e;
+}
+
+.send-button:hover {
+    background-color: #283044;
+}
+
+.popup-btn{
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    background-color: black;
+    opacity: 0.7;
+}
+.popup-btn p{
+    font-size: 50px;
+    color: rgb(216, 83, 83);
+    background-color: transparent;
+}
+</style>
+@if(WrongAnswer){
+<button class="popup-btn" @onclick="SchovejPopUp">
+    <p>Špatná odpoveď</p>
+</button>
+}
+
+@code{
+    private bool WrongAnswer = false; 
+    private void SchovejPopUp(){ WrongAnswer = false; }
+    private void EnterEvent(KeyboardEventArgs e, Questions question)
+    {
+        if (e.Key == "Enter")
+            CheckAnswer(question);
+    }
+    private void CheckAnswer(Questions question){
+        if(question.clientAnswer.ToLower() == question.odpoved.ToLower())
+            question.correctAnswer = true;
+        else
+            WrongAnswer = true;
+    }
+    private void NextHint(Questions question){
+        if(question.hintID != question.napovedy.Length - 1)
+            question.hintID++;
+        
+        question.showedHint = question.napovedy[question.hintID];
+    }
+    private async void GoToSelect() { 
+        MainClass.SetValues();
+        await ClearLocalStorage();
+    }
+    private async Task ClearLocalStorage()
+    {
+        await JSRuntime.InvokeVoidAsync("localStorage.clear");
+    }
+}
+
+@if(MainClass.Questions != null){
+@foreach(Questions x in MainClass.Questions!){
+<div class="box">
+    <h3>@x.otazka</h3>
+    <div class="input-container">
+        @if(!x.correctAnswer){
+        <input type="text" placeholder="Napište odpověď" @bind="x.clientAnswer" @bind:event="oninput" @onkeypress="(e => EnterEvent(e,x))">
+        <button class="question-button" @onclick="() => NextHint(x)">?</button>
+        <button class="send-button" @onclick="() => CheckAnswer(x)">➤</button>
+        } else {
+        <p style="color: aquamarine;">Správná odpoveď: @x.odpoved</p>
+        }
+    </div>
+    @if(x.showedHint != ""){
+    <p style="color: #bfa89e;">Nápověda: @x.showedHint</p>
+    }
+</div>
+}
+
+<div class="box">
+    <h3>Jaká je vlajka?</h3>
+    <div class="input-container">
+        @if(!EndOfGame.Win){
+        <input type="text" placeholder="Napište odpověď" @bind="EndOfGame.ClientFlag" />
+        <button class="send-button" @onclick="() => EndOfGame.FlagCheck()">➤</button>
+        } else {
+        <p style="color: aquamarine;">Vlajka je správná</p>
+        }
+    </div>
+</div> 
+
+}}
+
+
+
+@code{
+    public static class EndOfGame{
+        public static bool Win = false;
+        public static string ClientFlag = ""; 
+        public static void FlagCheck(){ if(ClientFlag == MainClass.Flag) Win = true; }
+    }
+    public static class MainClass{
+        public static string IPAddress {get; private set;}
+        public static string DockerID {get; private set;}
+        public static string Title {get; private set;}
+        public static string Flag {get; private set;}
+        public static List<Questions> Questions {get; private set;}
+        public static void SetValues(string ip = null, string id = null, string title = null, string flag = null, List<Questions> quest = null){
+            IPAddress = ip;
+            DockerID = id;
+            Title = title;
+            Flag = flag;
+            Questions = quest;
+        }
+    }
+    public class Questions{
+        public string otazka {get;set;}
+        public string odpoved {get;set;}
+        public string[] napovedy {get;set;}
+        public string showedHint {get;set;}
+        public int hintID {get;set;}
+        public string clientAnswer {get;set;}
+        public bool correctAnswer {get;set;}
+    }
+}

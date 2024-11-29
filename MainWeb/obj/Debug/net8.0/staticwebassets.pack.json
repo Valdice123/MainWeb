@@ -1,0 +1,41 @@
+{
+  "Files": [
+    {
+      "Id": "/home/michal/Work/testovaci/MainWeb/obj/Debug/net8.0/scopedcss/projectbundle/MainWeb.bundle.scp.css",
+      "PackagePath": "staticwebassets/MainWeb.bundle.scp.css"
+    },
+    {
+      "Id": "/home/michal/Work/testovaci/MainWeb/wwwroot/app.css",
+      "PackagePath": "staticwebassets/app.css"
+    },
+    {
+      "Id": "/home/michal/Work/testovaci/MainWeb/wwwroot/bootstrap/bootstrap.min.css",
+      "PackagePath": "staticwebassets/bootstrap/bootstrap.min.css"
+    },
+    {
+      "Id": "/home/michal/Work/testovaci/MainWeb/wwwroot/bootstrap/bootstrap.min.css.map",
+      "PackagePath": "staticwebassets/bootstrap/bootstrap.min.css.map"
+    },
+    {
+      "Id": "/home/michal/Work/testovaci/MainWeb/wwwroot/favicon.png",
+      "PackagePath": "staticwebassets/favicon.png"
+    },
+    {
+      "Id": "obj/Debug/net8.0/staticwebassets/msbuild.MainWeb.Microsoft.AspNetCore.StaticWebAssets.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
+    },
+    {
+      "Id": "obj/Debug/net8.0/staticwebassets/msbuild.build.MainWeb.props",
+      "PackagePath": "build\\MainWeb.props"
+    },
+    {
+      "Id": "obj/Debug/net8.0/staticwebassets/msbuild.buildMultiTargeting.MainWeb.props",
+      "PackagePath": "buildMultiTargeting\\MainWeb.props"
+    },
+    {
+      "Id": "obj/Debug/net8.0/staticwebassets/msbuild.buildTransitive.MainWeb.props",
+      "PackagePath": "buildTransitive\\MainWeb.props"
+    }
+  ],
+  "ElementsToRemove": []
+}
