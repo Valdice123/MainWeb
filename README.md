@@ -1,5 +1,4 @@
 # MainWeb
-web pro studenty k dockeru
 
 ### StartUp
 Potřebujete ještě JSON soubory, z které se čerpají data. Já používám Linux takže jsou na absolutní cestě /opt/Projekt/.. .
